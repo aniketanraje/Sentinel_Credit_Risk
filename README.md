@@ -28,7 +28,7 @@ The system is designed to be understandable, inspectable, and defensible under a
 ---
 
 ## Project Structure
-
+```
 Sentinel_Credit_Risk-main 
 Sentinel_Credit_Risk-main
 ├── 1_ingest_and_clean.py
@@ -50,7 +50,7 @@ Sentinel_Credit_Risk-main
 └── requirements.txt
 
 4 directories, 13 files
-
+```
 
 ---
 

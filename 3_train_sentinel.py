@@ -20,6 +20,7 @@ from sklearn.pipeline import Pipeline
 
 
 # 1. INFRASTRUCTURE SETUP
+
 LOG_DIR = "logs"
 MODEL_DIR = "models"
 DATA_DIR = "data"
@@ -48,6 +49,7 @@ def load_and_split_data():
     SE4ML: Fetches data and performs Stratified Train-Test Split.
     Stratifcation is non-negotiable due to class imbalance.
     """
+
     logger.info("Loading data from Production Vault")
     conn = sqlite3.connect(DB_PATH)
     query = "SELECT * FROM credit_data"
@@ -55,16 +57,19 @@ def load_and_split_data():
     conn.close()
 
     # Feature Separation 
+
     target_col = "default_payment_next_month"
     X = df.drop(columns=[target_col, "id"]) # dropping ID to prevent data leakage
     y = df[target_col]
 
     # Calculate scale weight fr XGBoost (Imbalance Handling)
     # Formula: count(negative_examples) / count(positive_examples)
+
     scale_weight = (y == 0).sum() / (y == 1).sum()
     logger.info(f"Computed scale weight for XGBoost: {scale_weight:.2f}")
 
     # Stratified Split (80-20)
+
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42, stratify=y
     )
@@ -72,7 +77,9 @@ def load_and_split_data():
     logger.info(f"Split Complete: Train Size: {X_train.shape[0]}, Test Size: {X_test.shape[0]}")
     return X_train, X_test, y_train, y_test, scale_weight
 
+
 # 3. PIPELINE CONSTRUCTION 
+
 def build_pipeline(scale_weight):
     """ 
     SE4ML: The Atomic Pipeline encapsulating Preprocessing and Model Training.
@@ -92,19 +99,24 @@ def build_pipeline(scale_weight):
         ))
     ])
 
+
 # 4. EVALUATION & ARTIFACT GENERATION
+
 def evaluate_and_save(pipeline, X_test, y_test):
     """ 
     SE4ML: Evaluates the trained model and saves artifacts.
     Generates Classification Report, Confusion Matrix, and saves the model.
     """
+
     logger.info("Evaluating Model Performance")
 
     #1. Predictions
+
     y_pred = pipeline.predict(X_test)
     y_prob = pipeline.predict_proba(X_test)[:, 1]
 
     # 2. Metrics
+
     auc = roc_auc_score(y_test, y_prob)
     f1 = f1_score(y_test, y_pred)
 
@@ -115,6 +127,7 @@ def evaluate_and_save(pipeline, X_test, y_test):
     logger.info("\n" + classification_report(y_test, y_pred))
 
     # 3. Visual Evidence: Confusion Matrix
+
     plt.figure(figsize=(8,6))
     cm = confusion_matrix(y_test, y_pred)
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
@@ -133,7 +146,9 @@ def evaluate_and_save(pipeline, X_test, y_test):
         pickle.dump(pipeline, f)
     logger.info(f"SUCCESS: Model Pipeline saved at {model_path}")
 
+
 # 5. EXECUTION
+
 if __name__ == "__main__":
     try:
         # Load 

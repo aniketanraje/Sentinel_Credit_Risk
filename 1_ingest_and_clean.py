@@ -22,6 +22,7 @@ RAW_DATA_PATH = os.path.join(DATA_DIR, "Credit_Card_Default.csv")
 if not os.path.exists(LOG_DIR): os.makedirs(LOG_DIR)
 
 # Configure 'Sentinel' Auditor 
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s |[%(levelname)s] | MODULE:INGEST | %(message)s",
@@ -49,6 +50,7 @@ class CreditRecord(BaseModel):
     age: int = Field(ge=18, le=100, description="legal age range 18-100")
 
     # Repayment status (-2=NO consumption, -1=Paid in Full, 0=Revolving, 1-9=Months delaty)
+
     pay_0: int 
     pay_2: int
     pay_3: int
@@ -57,7 +59,8 @@ class CreditRecord(BaseModel):
     pay_6: int
 
 
-    # Bill amounts ( can be negative if overpaid)
+    # Bill amounts (can be negative if overpaid)
+
     bill_amt1: float
     bill_amt2: float
     bill_amt3: float
@@ -66,6 +69,7 @@ class CreditRecord(BaseModel):
     bill_amt6: float
 
     # Previous payment amounts (Must be non-negative)
+
     pay_amt1: float = Field(ge=0)
     pay_amt2: float = Field(ge=0)
     pay_amt3: float = Field(ge=0)
@@ -74,6 +78,7 @@ class CreditRecord(BaseModel):
     pay_amt6: float = Field(ge=0)
 
     # Target (0=No Default, 1=Default)
+
     default_payment_next_month: int = Field(ge=0, le=1)
 
 
@@ -90,13 +95,16 @@ def clean_column_names(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Dataframe with cleaned column names
     """
+
     # FIXED: Added quote and dot replacement
+
     df.columns = [col.replace('"', '').replace('.', '_').strip().lower() for col in df.columns]
     df.columns = df.columns.str.replace(" ", "_", regex=False)
     
     # Fix specific discrepance in dataset 
+
     if 'default_payment_next_month' not in df.columns:
-        # FIXED: Removed the 's' from the source key to match actual CSV dots-to-underscore conversion
+        # Normalize quotes and dots to match Pydantic snake_case contract
         df.rename(columns={'default_payment_next_month': 'default_payment_next_month'}, inplace=True)
     return df
 
@@ -104,13 +112,16 @@ def run_ingestion():
     logger.info("Initializing Sentinel Ingestion Pipeline")
 
     # 1. Validation: Check Raw Data Existence
+
     if not os.path.exists(RAW_DATA_PATH):
         logger.critical(f"FATAL: Raw data not found at {RAW_DATA_PATH}")
         return
     
     # 2. Loading Raw Data 
+
     try:
         # Added low_memory=False to ensure types are consistent
+
         df_raw = pd.read_csv(RAW_DATA_PATH, low_memory=False)
         logger.info(f"Raw data loaded with shape: {df_raw.shape}")
     except Exception as e:
@@ -122,6 +133,7 @@ def run_ingestion():
     df_clean = clean_column_names(df_raw)
 
     # 4. Strict Pydantic Validation (The Loop)
+
     records = df_clean.to_dict(orient="records")
     validated_rows = []
     failed_rows = 0
@@ -129,6 +141,7 @@ def run_ingestion():
     for i,row in enumerate(records):
         try:
             # The Gatekeeper: Instantiating the model forces validatiion
+            
             valid_record = CreditRecord(**row)
             validated_rows.append(valid_record.model_dump())
         except ValidationError as ve:
@@ -138,7 +151,8 @@ def run_ingestion():
     
     logger.info(f"Validation complete. {len(validated_rows)} records valid, {failed_rows} records failed.")
 
-    # 5. Persistence (The Valut)
+    # 5. Persistence (The Vault)
+
     if validated_rows:
         try:
             conn = sqlite3.connect(DB_PATH)

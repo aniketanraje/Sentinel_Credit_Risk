@@ -20,6 +20,7 @@ ARTIFACTS_DIR = "outputs"
 DB_PATH = os.path.join(DATA_DIR, "sentinel_production.db")
 
 # Ensure artifacts storage exists
+
 if not os.path.exists(ARTIFACTS_DIR): os.makedirs(ARTIFACTS_DIR)
 if not os.path.exists(LOG_DIR): os.makedirs(LOG_DIR)
 
@@ -64,6 +65,7 @@ def plot_target_imbalance(df: pd.DataFrame):
     """
     AUDIT 1: Class imbalance requires SMOTE or XGBoost scale_pos_weight.
     """
+
     plt.figure(figsize=(8,6))
     sns.set_theme(style="whitegrid")
 
@@ -93,14 +95,20 @@ def plot_correlation_heatmap(df: pd.DataFrame):
     Justification: Identify multicollinearity among features
     confirm 'PAY_0' predictive power.
     """
+
     plt.figure(figsize=(12,10))
+
     # Select only numeic features for correlation
+    
     corr = df.corr()
+    
     # Focus on correlations with target
+    
     target_corr = corr[['default_payment_next_month']].sort_values(by='default_payment_next_month', ascending=False)
     logger.info("Top 5 positive Correlations:\n" + str(target_corr.head(5)))
 
     # Plot full correlation heatmap
+    
     sns.heatmap(corr, cmap="coolwarm",
                annot= False,
                fmt=".2f",
@@ -119,9 +127,11 @@ def audit_skewness_and_distribution(df: pd.DataFrame, col: str= "limit_bal"):
     
     Justification: If Skew > 1, we must apply Log/ Box-Cox Transformations in training. 
     """
+    
     plt.figure(figsize=(10,6))
     
     # 1. Calculate Statistics
+    
     data_col = df[col]
     skewness = skew(data_col)
 
@@ -132,6 +142,7 @@ def audit_skewness_and_distribution(df: pd.DataFrame, col: str= "limit_bal"):
     logger.info(f"Feature '{col}' Skewness: {skewness:.4f}")
 
     # 2. Plot Distribution
+    
     sns.histplot(data_col, kde=True, color='navy', bins=50)
     plt.title(f"Distribution of '{col.upper()}' (Skewness: {skewness:.2f})", fontsize=14)
 
@@ -149,7 +160,8 @@ def plot_pay_status_impact(df: pd.DataFrame):
     plt.figure(figsize=(10,6))
 
     # Group by PAY_0 status and calculate default rates
-    # PAY_): -2=No consumption, -1=Paid in Full, 0=Revolving, 1-9=Months delay
+    # PAY_0: -2=No consumption, -1=Paid in Full, 0=Revolving, 1-9=Months delay
+    
     default_rate = df.groupby('pay_0')['default_payment_next_month'].mean() * 100  # percentage
 
     sns.barplot(x=default_rate.index, 
@@ -171,18 +183,21 @@ def plot_pay_status_impact(df: pd.DataFrame):
     plt.close()
     logger.info(f"Artifact: PAY_0 risk impact plot saved to {save_path}")   
 
+
 # 4. RUN EDA PIPELINE
 
 def run_sentinel_eda():
     logger.info("Initializing Sentinel EDA Pipeline")
 
     # 1. Load clean data
+
     try:
         df = load_clean_data()
     except Exception as e:
         return 
 
     # 2. Run Audits & Generate Artifacts
+
     logger.info("——— Starting EDA Audits & Artifact Generation ———")
     plot_target_imbalance(df)
     plot_correlation_heatmap(df)
@@ -190,6 +205,7 @@ def run_sentinel_eda():
     audit_skewness_and_distribution(df, col="age")
     plot_pay_status_impact(df)
     logger.info("——— EDA Audits & Artifact Generation Completed ———")
+
 
 if __name__ == "__main__":
     run_sentinel_eda()  

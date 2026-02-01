@@ -6,23 +6,27 @@ import shap
 import matplotlib.pyplot as plt
 
 # --- CONFIG ---
+
 st.set_page_config(page_title="Sentinel Auditor", layout="wide")
 MODEL_PATH = "models/sentinel_optimized.pkl"
+
 
 @st.cache_resource
 def load_assets():
     """Load the pipeline and extract the model for SHAP without bs naming errors."""
+
     if not os.path.exists(MODEL_PATH):
         return None, None
     
     with open(MODEL_PATH, 'rb') as f:
         pipeline = pickle.load(f)
     
-    # Grab the last step (the XGBoost model) regardless of what you named it
-    raw_model = pipeline.steps[-1][1]
+    # Extract raw model from pipeline
+    raw_model = pipeline.steps[-1][1] #  This is a way to get the model regardless of what you named it
     explainer = shap.TreeExplainer(raw_model)
     
     return pipeline, explainer
+
 
 def main():
     st.title("🛡️ Sentinel: Credit Risk Command Center")
@@ -37,7 +41,9 @@ def main():
 
     with tab1:
         st.subheader("Individual Risk Assessment")
-        # Creating a mockup input for the M3 to process
+
+        # Creating a mockup input to process
+
         c1, c2, c3 = st.columns(3)
         with c1:
             limit = st.number_input("Limit Balance", value=50000)
@@ -50,6 +56,7 @@ def main():
 
         if st.button("Analyze Account"):
             # Create input with lowercase names to match model expectations
+
             features = [limit, 1, 2, 1, age, pay_0, 0, 0, 0, 0, 0, 
                         bill_1, 0, 0, 0, 0, 0, pay_1, 0, 0, 0, 0, 0]
             df_input = pd.DataFrame([features], columns=pipeline.feature_names_in_)
@@ -59,6 +66,7 @@ def main():
             st.metric("Default Probability", f"{prob:.2%}")
             
             # SHAP Force Plot
+
             st.write("### Risk Drivers (SHAP Explanation)")
             shap_values = explainer.shap_values(df_input)
             fig, ax = plt.subplots(figsize=(10, 3))
@@ -74,18 +82,21 @@ def main():
             df = pd.read_csv(uploaded_file)
             if st.button("🚀 Run Mass Audit"):
                 # Clean: Drop targets and force lowercase
+
                 data = df.drop(columns=['ID', 'id', 'default_payment_next_month'], errors='ignore')
                 data.columns = [c.lower() for c in data.columns]
                 
                 # Inference
+
                 probs = pipeline.predict_proba(data)[:, 1]
                 df['Risk_Score'] = probs
                 df['Verdict'] = ["High Risk" if p > 0.5 else "Safe" for p in probs]
                 
-                st.success(f"M3 scanned {len(df)} records in record time.")
+                st.success(f"🛡️ Sentinel scanned {len(df)} accounts.")
                 st.dataframe(df.sort_values('Risk_Score', ascending=False))
                 
                 # Download results
+
                 csv = df.to_csv(index=False).encode('utf-8')
                 st.download_button("Download Full Audit", csv, "sentinel_audit_results.csv", "text/csv")
 

@@ -14,10 +14,12 @@ from sklearn.pipeline import Pipeline
 from sklearn.metrics import classification_report
 
 # Setup
+
 DB_PATH = "data/sentinel_production.db"
 MODEL_PATH = "models/sentinel_optimized.pkl"
 
 # 1. Load Data
+
 conn = sqlite3.connect(DB_PATH)
 df = pd.read_sql("SELECT * FROM credit_data", conn)
 conn.close()
@@ -29,12 +31,14 @@ scale_weight = (y == 0).sum() / (y == 1).sum()
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
 
 # 2. Define Pipeline
+
 base_pipe = Pipeline([
     ('scaler', StandardScaler()),
     ('classifier', XGBClassifier(eval_metric='logloss', scale_pos_weight=scale_weight, random_state=42))
 ])
 
 # 3. Define Search Space (The "Pro" Grid)
+
 param_dist = {
     'classifier__n_estimators': [100, 200, 300],
     'classifier__max_depth': [3, 4, 5, 6],
@@ -43,6 +47,7 @@ param_dist = {
 }
 
 # 4. Execute Search
+
 print("Initiating Search... Grab a coffee.")
 search = RandomizedSearchCV(
     base_pipe, param_distributions=param_dist, 
@@ -51,6 +56,7 @@ search = RandomizedSearchCV(
 search.fit(X_train, y_train)
 
 # 5. Save the "Alpha" Model
+
 best_model = search.best_estimator_
 print(f"Best Params: {search.best_params_}")
 print("\n--- OPTIMIZED PERFORMANCE ---")
